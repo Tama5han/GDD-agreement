@@ -23,7 +23,7 @@ from GDDA import GDDA
 gdda = GDDA()
 
 # Compute the GDD-agreement.
-a = gdda.agreement(G, H, mean="arith")
+a = gdda.agreement(G, H, method="arith")
 
 print(a)# 0.63057...
 ```
