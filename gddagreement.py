@@ -1,42 +1,79 @@
 import networkx as nx
 import numpy as np
+from math import sqrt
+
+NUMBER_OF_ORBITS = 73
+
+class GDDA:
+    """
+    This class computes the GDD-agreement.
+    """
+    
+    def agreement(self, G, H, method="arith"):
+        """
+        This method computes the GDD-agreement between graphs G and H.
+
+        Arguments
+        ----------
+        G, H : networkx.Graph
+            Networkx graphs.
+
+        method : "arith" or "geo" or None
+            Method to calculate the average.
+            If None, return a vector before calculating the GDD-agreement.
+        """
+        assert (method in ["arith", "geo"]) or (method is None)
+        
+        # Computing GDDs
+        gdd_G = self.distribution(G.to_undirected())
+        gdd_H = self.distribution(H.to_undirected())
+        
+        # Computing the vector before the GDD-agreement.
+        gdda_vector = GDD_agreement_vector(gdd_G, gdd_H)
+        
+        if method is None:
+            return gdda_vector
+        elif method == "arith":
+            return gdda_vector.mean()
+        else:
+            return np.exp(np.log(gdda_vector).mean())
+    
+    
+    def distribution(self, G):
+        """
+        This method computes th GDD of graph G.
+        
+        Arguments
+        ----------
+        G : networkx.Graph
+            A networkx graph.
+        """
+        adjacency_matrix = nx.to_scipy_sparse_matrix(G, format='lil')
+        return graphlet_degree_distribution(adjacency_matrix)
 
 
-def comb(n):
-    return n * (n - 1) // 2
 
-
-def to_DD(x):
-    return np.bincount(x)
-
-
-def graphlet_degree_distribution(G):
-    '''
-    This function computes the GDD of a given graph.
+def graphlet_degree_distribution(adjacency_matrix):
+    """
+    This function computes the GDD of a graph with adjacency_matrix.
     
     Arguments
     ----------
-    G : networkx.Graph
-        Undirected graph.
-    '''
-    nodes  = list(G.nodes())
-    mapper = { v: i for i, v in enumerate(nodes) }
-
-    # Normalize nodes.
-    G_norm = nx.Graph()
-    G_norm.add_nodes_from([ mapper[v] for v in nodes ])
-    G_norm.add_edges_from([ (mapper[u], mapper[v]) for u, v in G.edges() ])
+    adjacency_matrix : scipy.lil_matrix
+        An adjacency matrix.
+    """
+    G = nx.from_scipy_sparse_matrix(adjacency_matrix)
     
-    return _graphlet_degree_distribution(G_norm)
-
-
-def _graphlet_degree_distribution(G):
     V = G.number_of_nodes()
-    N = [ set(G.neighbors(v)) for v in range(V) ]
-    orbits = np.zeros((V, 73), dtype=np.int64)
+    N = [ set(G.neighbors(v)) for v in G.nodes() ]
+    orbits = np.zeros((V, NUMBER_OF_ORBITS), dtype=np.int64)
     
     # Orbit 0 is a degree distribution
-    orbits[:, 0] = [ G.degree(v) for v in range(V) ]
+    orbits[:, 0] = [ d for v, d in G.degree() ]
+    
+    
+    def comb(n):
+        return n * (n - 1) // 2
     
     # Orbits 1-72
     for u, v in G.edges():
@@ -623,14 +660,20 @@ def _graphlet_degree_distribution(G):
         orbits[v, 72] += n_29_1
     
     # Converting to GDD
-    gdd = [ None for _ in range(73) ]
+    def to_DD(x):
+        return np.bincount(x)
     
+    gdd = [ None for _ in range(NUMBER_OF_ORBITS) ]
+    
+    # 2-node graphlet
     gdd[0]  = to_DD(orbits[:,  0])
     
+    # 3-node graphlets
     gdd[1]  = to_DD(orbits[:,  1])
     gdd[2]  = to_DD(orbits[:,  2] // 2)
     gdd[3]  = to_DD(orbits[:,  3] // 2)
     
+    # 4-node graphlets
     gdd[4]  = to_DD(orbits[:,  4])
     gdd[5]  = to_DD(orbits[:,  5] // 2)
     gdd[6]  = to_DD(orbits[:,  6])
@@ -643,6 +686,7 @@ def _graphlet_degree_distribution(G):
     gdd[13] = to_DD(orbits[:, 13] // 3)
     gdd[14] = to_DD(orbits[:, 14] // 3)
     
+    # 5-node graphlets
     gdd[15] = to_DD(orbits[:, 15])
     gdd[16] = to_DD(orbits[:, 16] // 2)
     gdd[17] = to_DD(orbits[:, 17] // 2)
@@ -705,9 +749,44 @@ def _graphlet_degree_distribution(G):
     return gdd
 
 
+def GDD_agreement_vector(gdd_G, gdd_H):
+    """
+    This function computes the GDD-agreement between gdd_G and gdd_H.
+    
+    Arguments
+    ----------
+    gdd_G, gdd_H : list of numpy.ndarray
+        GDDs.
+    """
+    # Normalization
+    norm_gdd_G = normalized_distribution(gdd_G)
+    norm_gdd_H = normalized_distribution(gdd_H)
+    sq2 = sqrt(2)
+    
+    gdda_vector = np.array([
+        1 - padded_norm(norm_gdd_G[j], norm_gdd_H[j]) / sq2 for j in range(NUMBER_OF_ORBITS)
+    ])
+    
+    return gdda_vector
+
+
+def normalized_distribution(gdd):
+    # Scaling
+    S = [ np.array([ d / k if k != 0 else 0 for k, d in enumerate(dd_j) ])  for dd_j in gdd ]
+    
+    # Total
+    T = [ s_j.sum() for s_j in S ]
+    
+    # Normalization
+    N = [ s_j / T[j] if T[j] != 0 else np.array([0.0]) for j, s_j in enumerate(S) ]
+    
+    return N
+
+
 def padded_norm(x, y):
     nx = len(x)
     ny = len(y)
+    
     if nx > ny:
         y_pad = np.pad(y, (0, nx - ny))
         return np.linalg.norm(x - y_pad)
@@ -716,67 +795,3 @@ def padded_norm(x, y):
         return np.linalg.norm(x_pad - y)
     else:
         return np.linalg.norm(x - y)
-
-
-def _GDD_agreement(gdd_G, gdd_H):
-    '''
-    This function computes the GDD-agreement for orbits between two GDDs.
-    
-    Arguments
-    ----------
-    gdd_G. gdd_H : list[list]
-        GDDs of graph G, H.
-    '''
-    nd_G = _normalized_distribution(gdd_G)
-    nd_H = _normalized_distribution(gdd_H)
-    sq2  = np.sqrt(2)
-    return np.array([ 1 - padded_norm(nd_G[j], nd_H[j]) / sq2 for j in range(73) ])
-
-
-def _normalized_distribution(gdd):
-    # Scaling
-    S = [ np.array([ d / k if k != 0 else 0 for k, d in enumerate(dd_j) ]) for dd_j in gdd ]
-    # Total
-    T = [ s_j.sum() for s_j in S ]
-    # Normalization
-    N = [ s_j / T[j] if T[j] != 0 else np.array([0.0]) for j, s_j in enumerate(S) ]
-    return N
-
-
-class GDDA:
-    '''
-    This class contains the methods to compute the GDD-agreement.
-    '''
-    def agreement(self, G, H, method='arith'):
-        '''
-        This method computes the GDD-agreement of G and H.
-
-        Arguments
-        ----------
-        G, H : networkx.Graph
-            Undirected graphs.
-
-        method : None or "arith" or "geo"
-            Method to calculate the average.
-        '''
-        assert method in [None, 'arith', 'geo']
-        self.method = method
-        
-        self.graphs = [
-            G.to_undirected(),
-            H.to_undirected()
-        ]
-        
-        self.gdds = [
-            graphlet_degree_distribution(self.graphs[0]),
-            graphlet_degree_distribution(self.graphs[1])
-        ]
-
-        self.gdda = _GDD_agreement(*self.gdds)
-
-        if self.method is None:
-            return self.gdda[:]
-        elif self.method == 'arith':
-            return self.gdda.mean()
-        else:
-            return np.exp(np.log(self.gdda).mean())
