@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 from math import sqrt
+from tqdm import tqdm
 
 NUMBER_OF_ORBITS = 73
 
@@ -9,7 +10,7 @@ class GDDA:
     This class computes the GDD-agreement.
     """
     
-    def agreement(self, G, H, method="arith"):
+    def agreement(self, G, H, method="arith", verbose=False):
         """
         This method computes the GDD-agreement between graphs G and H.
 
@@ -21,12 +22,17 @@ class GDDA:
         method : "arith" or "geo" or None
             Method to calculate the average.
             If None, return a vector before calculating the GDD-agreement.
+        
+        verbose : bool
+            Show progress bar if True.
         """
         assert (method in ["arith", "geo"]) or (method is None)
         
         # Computing GDDs
-        gdd_G = self.distribution(G.to_undirected())
-        gdd_H = self.distribution(H.to_undirected())
+        if verbose: print("Computing the GDD of G.")
+        gdd_G = self.distribution(G.to_undirected(), verbose=verbose)
+        if verbose: print("Computing the GDD of H.")
+        gdd_H = self.distribution(H.to_undirected(), verbose=verbose)
         
         # Computing the vector before the GDD-agreement.
         gdda_vector = GDD_agreement_vector(gdd_G, gdd_H)
@@ -39,7 +45,7 @@ class GDDA:
             return np.exp(np.log(gdda_vector).mean())
     
     
-    def distribution(self, G):
+    def distribution(self, G, verbose=False):
         """
         This method computes th GDD of graph G.
         
@@ -47,13 +53,16 @@ class GDDA:
         ----------
         G : networkx.Graph
             A networkx graph.
+        
+        verbose : bool
+            Show progress bar if True.
         """
-        adjacency_matrix = nx.to_scipy_sparse_matrix(G, format='lil')
-        return graphlet_degree_distribution(adjacency_matrix)
+        adjacency_matrix = nx.to_scipy_sparse_matrix(G, format="lil")
+        return graphlet_degree_distribution(adjacency_matrix, verbose=verbose)
 
 
 
-def graphlet_degree_distribution(adjacency_matrix):
+def graphlet_degree_distribution(adjacency_matrix, verbose=False):
     """
     This function computes the GDD of a graph with adjacency_matrix.
     
@@ -61,6 +70,9 @@ def graphlet_degree_distribution(adjacency_matrix):
     ----------
     adjacency_matrix : scipy.lil_matrix
         An adjacency matrix.
+    
+    verbose : bool
+            Show progress bar if True.
     """
     G = nx.from_scipy_sparse_matrix(adjacency_matrix)
     
@@ -75,8 +87,13 @@ def graphlet_degree_distribution(adjacency_matrix):
     def comb(n):
         return n * (n - 1) // 2
     
+    if verbose:
+        edges = tqdm(G.edges(), total=G.number_of_edges())
+    else:
+        edges = G.edges()
+    
     # Orbits 1-72
-    for u, v in G.edges():
+    for u, v in edges:
         N_u = N[u] - {v}
         N_v = N[v] - {u}
         U_e = N[u] | N[v]
