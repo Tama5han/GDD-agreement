@@ -45,7 +45,7 @@ class GDDA:
             return np.exp(np.log(gdda_vector).mean())
     
     
-    def distribution(self, G, verbose=False):
+    def distribution(self, G, verbose=False, orbit_mode=False):
         """
         This method computes th GDD of graph G.
         
@@ -58,11 +58,10 @@ class GDDA:
             Show progress bar if True.
         """
         adjacency_matrix = nx.to_scipy_sparse_matrix(G, format="lil")
-        return graphlet_degree_distribution(adjacency_matrix, verbose=verbose)
+        return graphlet_degree_distribution(adjacency_matrix, verbose=verbose, orbit_mode=orbit_mode)
 
 
-
-def graphlet_degree_distribution(adjacency_matrix, verbose=False):
+def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbit_mode=False):
     """
     This function computes the GDD of a graph with adjacency_matrix.
     
@@ -72,7 +71,10 @@ def graphlet_degree_distribution(adjacency_matrix, verbose=False):
         An adjacency matrix.
     
     verbose : bool
-            Show progress bar if True.
+        Show progress bar if True.
+    
+    orbit_mode : bool
+        Return orbit features.
     """
     G = nx.from_scipy_sparse_matrix(adjacency_matrix)
     
@@ -675,6 +677,9 @@ def graphlet_degree_distribution(adjacency_matrix, verbose=False):
         orbits[v, 71] += n_28_1_v + n_28_2
         orbits[u, 72] += n_29_1
         orbits[v, 72] += n_29_1
+    
+    if orbit_mode:
+        return orbits
     
     # Converting to GDD
     def to_DD(x):
