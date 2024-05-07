@@ -16,15 +16,13 @@ The *GDD-agreement* is the similarity between two networks defined in the follow
 
 ```python
 import networkx as nx
-from gddagreement import GDDA
-
-gdda = GDDA()
+import gddagreement as gd
 
 # Generate two networks
 G = nx.fast_gnp_random_graph(20, 0.3, seed=1)
 H = nx.fast_gnp_random_graph(15, 0.7, seed=2)
 
-a = gdda.agreement(G, H)
+a = gd.agreement(G, H)
 
 print(a)
 ```
