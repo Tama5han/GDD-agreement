@@ -19,14 +19,14 @@ class GDDA:
         G, H : networkx.Graph
             Networkx graphs.
 
-        method : "arith" or "geo" or None
+        method : "arith" or "geo" or "vec"
             Method to calculate the average.
-            If None, return a vector before calculating the GDD-agreement.
+            If "vec", return a vector before calculating the GDD-agreement.
         
         verbose : bool
             Show progress bar if True.
         """
-        assert (method in ["arith", "geo"]) or (method is None)
+        assert method in ["arith", "geo", "vec"]
         
         # Computing GDDs
         if verbose: print("Computing the GDD of G.")
@@ -37,7 +37,7 @@ class GDDA:
         # Computing the vector before the GDD-agreement.
         gdda_vector = GDD_agreement_vector(gdd_G, gdd_H)
         
-        if method is None:
+        if method == "vec":
             return gdda_vector
         elif method == "arith":
             return gdda_vector.mean()
@@ -45,7 +45,7 @@ class GDDA:
             return np.exp(np.log(gdda_vector).mean())
     
     
-    def distribution(self, G, verbose=False, orbit_mode=False):
+    def distribution(self, G, verbose=False, orbital_mode=False):
         """
         This method computes th GDD of graph G.
         
@@ -56,12 +56,20 @@ class GDDA:
         
         verbose : bool
             Show progress bar if True.
+
+        orbital_mode : bool
+            Return orbit features.
         """
         adjacency_matrix = nx.to_scipy_sparse_matrix(G, format="lil")
-        return graphlet_degree_distribution(adjacency_matrix, verbose=verbose, orbit_mode=orbit_mode)
+        
+        if orbital_mode:
+            orbits = graphlet_degree_distribution(adjacency_matrix, verbose=verbose, orbital_mode=True)
+            return dict(zip(G.nodes(), orbits))
+        else:
+            return graphlet_degree_distribution(adjacency_matrix, verbose=verbose)
 
 
-def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbit_mode=False):
+def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbital_mode=False):
     """
     This function computes the GDD of a graph with adjacency_matrix.
     
@@ -73,7 +81,7 @@ def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbit_mode=Fal
     verbose : bool
         Show progress bar if True.
     
-    orbit_mode : bool
+    orbital_mode : bool
         Return orbit features.
     """
     G = nx.from_scipy_sparse_matrix(adjacency_matrix)
@@ -678,7 +686,27 @@ def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbit_mode=Fal
         orbits[u, 72] += n_29_1
         orbits[v, 72] += n_29_1
     
-    if orbit_mode:
+    # Deleting duplicates
+    target_orbits = [
+         2,  3,  5,  8, 10, 12, 16, 17, 20, 25,
+        28, 29, 32, 34, 36, 37, 40, 43, 46, 49,
+        51, 52, 54, 59, 62, 65
+    ]
+    for j in target_orbits:
+        orbits[:, j] //= 2
+    
+    target_orbits = [
+         7, 11, 13, 14, 21, 26, 30, 38, 41, 47,
+        48, 50, 53, 57, 60, 63, 64, 66, 68, 70
+    ]
+    for j in target_orbits:
+        orbits[:, j] //= 3
+    
+    target_orbits = [23, 33, 42, 44, 55, 58, 61, 67, 69, 71, 72]
+    for j in target_orbits:
+        orbits[:, j] //= 4
+    
+    if orbital_mode:
         return orbits
     
     # Converting to GDD
@@ -687,86 +715,8 @@ def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbit_mode=Fal
     
     gdd = [ None for _ in range(NUMBER_OF_ORBITS) ]
     
-    # 2-node graphlet
-    gdd[0]  = to_DD(orbits[:,  0])
-    
-    # 3-node graphlets
-    gdd[1]  = to_DD(orbits[:,  1])
-    gdd[2]  = to_DD(orbits[:,  2] // 2)
-    gdd[3]  = to_DD(orbits[:,  3] // 2)
-    
-    # 4-node graphlets
-    gdd[4]  = to_DD(orbits[:,  4])
-    gdd[5]  = to_DD(orbits[:,  5] // 2)
-    gdd[6]  = to_DD(orbits[:,  6])
-    gdd[7]  = to_DD(orbits[:,  7] // 3)
-    gdd[8]  = to_DD(orbits[:,  8] // 2)
-    gdd[9]  = to_DD(orbits[:,  9])
-    gdd[10] = to_DD(orbits[:, 10] // 2)
-    gdd[11] = to_DD(orbits[:, 11] // 3)
-    gdd[12] = to_DD(orbits[:, 12] // 2)
-    gdd[13] = to_DD(orbits[:, 13] // 3)
-    gdd[14] = to_DD(orbits[:, 14] // 3)
-    
-    # 5-node graphlets
-    gdd[15] = to_DD(orbits[:, 15])
-    gdd[16] = to_DD(orbits[:, 16] // 2)
-    gdd[17] = to_DD(orbits[:, 17] // 2)
-    gdd[18] = to_DD(orbits[:, 18])
-    gdd[19] = to_DD(orbits[:, 19])
-    gdd[20] = to_DD(orbits[:, 20] // 2)
-    gdd[21] = to_DD(orbits[:, 21] // 3)
-    gdd[22] = to_DD(orbits[:, 22])
-    gdd[23] = to_DD(orbits[:, 23] // 4)
-    gdd[24] = to_DD(orbits[:, 24])
-    gdd[25] = to_DD(orbits[:, 25] // 2)
-    gdd[26] = to_DD(orbits[:, 26] // 3)
-    gdd[27] = to_DD(orbits[:, 27])
-    gdd[28] = to_DD(orbits[:, 28] // 2)
-    gdd[29] = to_DD(orbits[:, 29] // 2)
-    gdd[30] = to_DD(orbits[:, 30] // 3)
-    gdd[31] = to_DD(orbits[:, 31])
-    gdd[32] = to_DD(orbits[:, 32] // 2)
-    gdd[33] = to_DD(orbits[:, 33] // 4)
-    gdd[34] = to_DD(orbits[:, 34] // 2)
-    gdd[35] = to_DD(orbits[:, 35])
-    gdd[36] = to_DD(orbits[:, 36] // 2)
-    gdd[37] = to_DD(orbits[:, 37] // 2)
-    gdd[38] = to_DD(orbits[:, 38] // 3)
-    gdd[39] = to_DD(orbits[:, 39])
-    gdd[40] = to_DD(orbits[:, 40] // 2)
-    gdd[41] = to_DD(orbits[:, 41] // 3)
-    gdd[42] = to_DD(orbits[:, 42] // 4)
-    gdd[43] = to_DD(orbits[:, 43] // 2)
-    gdd[44] = to_DD(orbits[:, 44] // 4)
-    gdd[45] = to_DD(orbits[:, 45])
-    gdd[46] = to_DD(orbits[:, 46] // 2)
-    gdd[47] = to_DD(orbits[:, 47] // 3)
-    gdd[48] = to_DD(orbits[:, 48] // 3)
-    gdd[49] = to_DD(orbits[:, 49] // 2)
-    gdd[50] = to_DD(orbits[:, 50] // 3)
-    gdd[51] = to_DD(orbits[:, 51] // 2)
-    gdd[52] = to_DD(orbits[:, 52] // 2)
-    gdd[53] = to_DD(orbits[:, 53] // 3)
-    gdd[54] = to_DD(orbits[:, 54] // 2)
-    gdd[55] = to_DD(orbits[:, 55] // 4)
-    gdd[56] = to_DD(orbits[:, 56])
-    gdd[57] = to_DD(orbits[:, 57] // 3)
-    gdd[58] = to_DD(orbits[:, 58] // 4)
-    gdd[59] = to_DD(orbits[:, 59] // 2)
-    gdd[60] = to_DD(orbits[:, 60] // 3)
-    gdd[61] = to_DD(orbits[:, 61] // 4)
-    gdd[62] = to_DD(orbits[:, 62] // 2)
-    gdd[63] = to_DD(orbits[:, 63] // 3)
-    gdd[64] = to_DD(orbits[:, 64] // 3)
-    gdd[65] = to_DD(orbits[:, 65] // 2)
-    gdd[66] = to_DD(orbits[:, 66] // 3)
-    gdd[67] = to_DD(orbits[:, 67] // 4)
-    gdd[68] = to_DD(orbits[:, 68] // 3)
-    gdd[69] = to_DD(orbits[:, 69] // 4)
-    gdd[70] = to_DD(orbits[:, 70] // 3)
-    gdd[71] = to_DD(orbits[:, 71] // 4)
-    gdd[72] = to_DD(orbits[:, 72] // 4)
+    for j in range(NUMBER_OF_ORBITS):
+        gdd[j] = to_DD(orbits[:, j])
     
     return gdd
 
