@@ -5,68 +5,64 @@ from tqdm import tqdm
 
 NUMBER_OF_ORBITS = 73
 
-class GDDA:
+
+def agreement(G, H, method="arith", verbose=False):
     """
-    This class computes the GDD-agreement.
+    This method computes the GDD-agreement between graphs G and H.
+
+    Arguments
+    ----------
+    G, H : networkx.Graph
+        Networkx graphs.
+
+    method : "arith" or "geo" or "vec"
+        Method to calculate the average.
+        If "vec", return a vector before calculating the GDD-agreement.
+
+    verbose : bool
+        Show progress bar if True.
     """
-    
-    def agreement(self, G, H, method="arith", verbose=False):
-        """
-        This method computes the GDD-agreement between graphs G and H.
+    assert method in ["arith", "geo", "vec"]
 
-        Arguments
-        ----------
-        G, H : networkx.Graph
-            Networkx graphs.
+    # Computing GDDs
+    if verbose: print("Computing the GDD of the 1st graph.")
+    gdd_G = distribution(G.to_undirected(), verbose=verbose)
+    if verbose: print("Computing the GDD of the 2nd graph.")
+    gdd_H = distribution(H.to_undirected(), verbose=verbose)
 
-        method : "arith" or "geo" or "vec"
-            Method to calculate the average.
-            If "vec", return a vector before calculating the GDD-agreement.
-        
-        verbose : bool
-            Show progress bar if True.
-        """
-        assert method in ["arith", "geo", "vec"]
-        
-        # Computing GDDs
-        if verbose: print("Computing the GDD of G.")
-        gdd_G = self.distribution(G.to_undirected(), verbose=verbose)
-        if verbose: print("Computing the GDD of H.")
-        gdd_H = self.distribution(H.to_undirected(), verbose=verbose)
-        
-        # Computing the vector before the GDD-agreement.
-        gdda_vector = GDD_agreement_vector(gdd_G, gdd_H)
-        
-        if method == "vec":
-            return gdda_vector
-        elif method == "arith":
-            return gdda_vector.mean()
-        else:
-            return np.exp(np.log(gdda_vector).mean())
-    
-    
-    def distribution(self, G, verbose=False, orbital_mode=False):
-        """
-        This method computes th GDD of graph G.
-        
-        Arguments
-        ----------
-        G : networkx.Graph
-            A networkx graph.
-        
-        verbose : bool
-            Show progress bar if True.
+    # Computing the vector before the GDD-agreement.
+    gdda_vector = GDD_agreement_vector(gdd_G, gdd_H)
 
-        orbital_mode : bool
-            Return orbit features.
-        """
-        adjacency_matrix = nx.to_scipy_sparse_matrix(G, format="lil")
-        
-        if orbital_mode:
-            orbits = graphlet_degree_distribution(adjacency_matrix, verbose=verbose, orbital_mode=True)
-            return dict(zip(G.nodes(), orbits))
-        else:
-            return graphlet_degree_distribution(adjacency_matrix, verbose=verbose)
+    if method == "vec":
+        return gdda_vector
+    elif method == "arith":
+        return gdda_vector.mean()
+    else:
+        return np.exp(np.log(gdda_vector).mean())
+
+
+def distribution(G, verbose=False, orbital_mode=False):
+    """
+    This method computes th GDD of graph G.
+
+    Arguments
+    ----------
+    G : networkx.Graph
+        A networkx graph.
+
+    verbose : bool
+        Show progress bar if True.
+
+    orbital_mode : bool
+        Return orbit features.
+    """
+    adjacency_matrix = nx.to_scipy_sparse_matrix(G, format="lil")
+
+    if orbital_mode:
+        orbits = graphlet_degree_distribution(adjacency_matrix, verbose=verbose, orbital_mode=True)
+        return dict(zip(G.nodes(), orbits))
+    else:
+        return graphlet_degree_distribution(adjacency_matrix, verbose=verbose)
 
 
 def graphlet_degree_distribution(adjacency_matrix, verbose=False, orbital_mode=False):
