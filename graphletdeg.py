@@ -113,8 +113,8 @@ def orbit_counter(G, nodelist=None, verbose=False):
 
     Arguments
     ----------
-    A : scipy.sparse.lil_matrix
-        An adjacency matrix.
+    G : networkx.Graph
+        A networkx graph.
 
     nodelist : list
         The target nodes.
