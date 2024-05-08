@@ -29,8 +29,8 @@ def agreement(G, H, method="arith", verbose=False):
         * "geo" : geometric mean.
         * "vec" : vector before computing the GDD-agreement.
 
-    kwargs : optional
-        Parameters of function `_orbit_count()`.
+    verbose : bool
+        Show a progress bar if True.
     """
 
     assert (method=="arith") or (method=="geo") or (method=="vec")
