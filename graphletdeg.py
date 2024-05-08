@@ -59,7 +59,7 @@ def agreement(G, H, method="arith", verbose=False):
 
 
 
-def distribution(G, **kwargs):
+def distribution(G, verbose=False):
     """
     This function computes the GDD of graph G.
 
@@ -68,11 +68,11 @@ def distribution(G, **kwargs):
     G : networkx.Graph
         A networkx graph.
 
-    kwargs : optional
-        Parameters of function `_orbit_count()`.
+    verbose : bool
+        Show a progress bar if True.
     """
 
-    counts = orbit_counter(G, **kwargs)
+    counts = orbit_counter(G, verbose=verbose)
 
     return [ np.bincount(counts[:, j]) for j in range(NUMBER_OF_ORBITS) ]
 
@@ -80,7 +80,7 @@ def distribution(G, **kwargs):
 
 
 
-def orbital_features(G, **kwargs):
+def orbital_features(G, nodelist=None, verbose=False):
     """
     This function computes the orbital features of nodes.
 
@@ -89,19 +89,25 @@ def orbital_features(G, **kwargs):
     G : networkx.Graph
         A networkx graph.
 
-    kwargs : optional
-        Parameters of function `_orbit_count()`.
+    nodelist : list
+        The target nodes.
+
+    verbose : bool
+        Show a progress bar if True.
     """
 
-    counts = orbit_counter(G, **kwargs)
+    counts = orbit_counter(G, nodelist=nodelist, verbose=verbose)
 
-    return dict(zip(G.nodes(), counts))
+    if nodelist is None:
+        return dict(zip(G.nodes(), counts))
+    else:
+        return dict(zip(nodelist, counts))
 
 
 
 
 
-def orbit_counter(G, **kwargs):
+def orbit_counter(G, nodelist=None, verbose=False):
     """
     This function counts the number of orbits for each node.
 
@@ -110,8 +116,11 @@ def orbit_counter(G, **kwargs):
     A : scipy.sparse.lil_matrix
         An adjacency matrix.
 
-    kwargs : optional
-        Parameters of function `_orbit_count()`.
+    nodelist : list
+        The target nodes.
+
+    verbose : bool
+        Show a progress bar if True.
     """
 
     assert (not G.is_directed())
@@ -119,13 +128,17 @@ def orbit_counter(G, **kwargs):
 
     A = nx.to_scipy_sparse_matrix(G, format="lil")
 
-    return _orbit_counter(A, **kwargs)
+    if nodelist is not None:
+        mapper = { v: i for i, v in enumerate(G.nodes()) }
+        nodelist = [ mapper[v] for v in nodelist ]
+
+    return _orbit_counter(A, nodelist=nodelist, verbose=verbose)
 
 
 
 
 
-def _orbit_counter(A, verbose=False):
+def _orbit_counter(A, nodelist=None, verbose=False):
     """
     This function counts the number of orbits for each node.
 
@@ -133,6 +146,9 @@ def _orbit_counter(A, verbose=False):
     ----------
     A : scipy.sparse.lil_matrix
         An adjacency matrix.
+
+    nodelist : list
+        The target nodes.
 
     verbose : bool
         Show a progress bar if True.
@@ -154,10 +170,18 @@ def _orbit_counter(A, verbose=False):
     counts[:, 0] = [ d for v, d in G.degree() ]
 
 
-    if verbose:
-        edges = tqdm(G.edges(), total=G.number_of_edges())
+    if nodelist is None:
+        edgelist = G.edges()
+        E = G.number_of_edges()
     else:
-        edges = G.edges()
+        edgelist = list({ tuple(sorted([u, v])) for u in nodelist for v in N[u] })
+        E = len(edgelist)
+
+
+    if verbose:
+        edges = tqdm(edgelist, total=E)
+    else:
+        edges = edgelist
 
 
     # Orbits 1-72
@@ -810,7 +834,10 @@ def _orbit_counter(A, verbose=False):
         counts[:, j] //= 4
 
 
-    return counts
+    if nodelist is None:
+        return counts
+    else:
+        return counts[nodelist, :]
 
 
 
