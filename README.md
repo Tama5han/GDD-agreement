@@ -16,7 +16,7 @@ The *GDD-agreement* is the similarity between two networks defined in the follow
 
 ```python
 import networkx as nx
-import gddagreement as gd
+import graphletdeg as gd
 
 # Generate two networks
 G = nx.fast_gnp_random_graph(20, 0.3, seed=1)
